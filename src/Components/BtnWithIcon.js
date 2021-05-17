@@ -1,5 +1,5 @@
 import React from 'react'
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Image, StyleSheet,TouchableOpacity} from 'react-native'
 import colors from '../styles/colors';
 
 export default function BtnWithIcon(props) {

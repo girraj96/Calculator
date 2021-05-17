@@ -1,7 +1,9 @@
 import React, { Component } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
-import { countBy } from 'lodash'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import _, { countBy } from 'lodash'
 import mathExp from "math-expression-evaluator";
+import { connect } from 'react-redux';
+import actions from '../../redux/actions';
 
 //components
 import BtnComp from '../../Components/BtnComp'
@@ -13,8 +15,7 @@ import WrapperContainer from '../../Components/WrapperContainer'
 import imagePath from '../../constants/imagePath'
 import strings from '../../constants/lang'
 import colors from '../../styles/colors'
-import { connect } from 'react-redux';
-import actions from '../../redux/actions';
+
 
 
 class ScientificCalc extends Component {
@@ -29,47 +30,84 @@ class ScientificCalc extends Component {
   componentWillUnmount() {
     this._unsubscribe();
   }
-  _onBtn = (type, value) => {
-    const { displayValue } = this.props;
-    if (type === "number") {
-      this.checkInitialValue(value, type);
-    }
-    else if (type === "operator") {
-      switch (value) {
-        case "+":
-          this._onCheckOperators(value, "+", "-", "x", "÷")
-          break;
-        case "-":
-          this._onCheckOperators(value, "-", "+", "x", "÷")
 
-          break;
-        case "x":
-          this._onCheckOperators(value, "x", "+", "-", "÷")
-          break;
-        case "÷":
-          this._onCheckOperators(value, "÷", "+", "-", "x")
-          break;
-        case "(":
-          this.checkInitialValue(value, type)
-          break;
-        case ")":
-          this.checkInitialValue(value, type)
-          break;
-        default:
-          alert("please check operator")
-          break;
-      }
+  _onBtn = (type, value) => {
+    return _.isEqual(type, "number") ? this.handleNumbers(value, type)
+      : this.operatorSwitching(value);
+  }
+  operatorSwitching = (value) => {
+    switch (value) {
+      case "+":
+        this.handleOperators(value)
+        break;
+      case "-":
+        this.handleOperators(value)
+        break;
+      case "x":
+        this.handleOperators(value)
+        break;
+      case "÷":
+        this.handleOperators(value)
+        break;
+      case "^":
+        this.handleOperators(value)
+        break;
+      case "(":
+        this.handleOpenBracket(value)
+        break;
+      case ")":
+        this.handleCloseBracket(value)
+        break;
+      default:
+        alert("please check operator")
+        break;
     }
-    this.showTotal(value);
   }
 
-  showTotal=(value)=>{
-    const {displayValue}=this.props;
+  handleNumbers = (value) => {
+    const { displayValue } = this.props;
+    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+    if (_.isEqual("0", displayValue) || _.isEqual("00", displayValue)) {
+      // to change 0 and 00 to pressed number
+      actions.displayValues(value);
+    }
+    else if(_.includes([")","π"],lastInsertedValue)){
+      actions.displayValues(`${displayValue}x${value}`);
+      this.showTotal(`${value}`);
+    }
+    else {
+      actions.displayValues(`${displayValue}${value}`);
+      this.showTotal(value);
+    }
+  }
 
+  handleOperators = (value) => {
+    const { displayValue } = this.props;
+    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+    console.log(lastInsertedValue, value)
+    if (_.includes(["+", "-", "x", "÷", "^"], lastInsertedValue)) {
+      if (_.isEqual(lastInsertedValue, value)) {
+        return;
+      }
+      else {
+        let newDisplayValue = displayValue.substring(0, displayValue.length - 1)
+          + value
+          + displayValue.substring(displayValue.length);
+        actions.displayValues(newDisplayValue);
+      }
+    }
+    else {
+      actions.displayValues(`${displayValue}${value}`);
+    }
+  }
 
-    let newCurrentValue = `${displayValue}${value}`.replace(/x/gi, "*").replace(/÷/gi, "/").replace(/√/gi,"root");
+  showTotal = (value) => {
+    const { displayValue } = this.props;
+    let newCurrentValue = `${displayValue}${value}`.replace(/x/gi, "*").replace(/÷/gi, "/").replace(/√/gi, "root")
+      .replace(/π/g, "3.1415");
+    console.log(displayValue, "<==display value", "full value==>", newCurrentValue)
     if (!newCurrentValue.includes("+") && !newCurrentValue.includes("-") &&
-      !newCurrentValue.includes("*") && !newCurrentValue.includes("/") && !newCurrentValue.includes("root")) {
+      !newCurrentValue.includes("*") && !newCurrentValue.includes("/") && !newCurrentValue.includes("root") && !newCurrentValue.includes("^")) {
       return;
     }
     else {
@@ -82,67 +120,24 @@ class ScientificCalc extends Component {
     }
   }
 
-  checkInitialValue = (value, type) => {
-    const {displayValue}=this.props;
+  handleOpenBracket = (value) => {
+    const { displayValue } = this.props;
+    let numbers = /^[-+]?[0-9]+$/;
     let lastInsertedValue = displayValue.substring(displayValue.length - 1);
-    if (displayValue === "0" || displayValue == "00") {
-      actions.displayValues(value);
-
-    }
-    else if (value === "(") {
-
-      let numbers = /^[-+]?[0-9]+$/;
-      if (numbers.test(lastInsertedValue)) {
-        if (type === "operator") {
-          actions.displayValues(`${displayValue}x${value}`);
-        }
-        else {
-          actions.displayValues(`${displayValue}${value}`);
-        }
-      }
-      else {
-        actions.displayValues(`${displayValue}${value}`);
-      }
-    }
-    else if (value === ")") {
-      let countOpenBrackets = countBy(displayValue)["("];
-      let countCloseBrackets = countBy(displayValue)[")"];
-      if (countOpenBrackets === countCloseBrackets) {
-        return;
-      }
-      actions.displayValues(`${displayValue}${value}`);
-
+    if (numbers.test(lastInsertedValue)) {
+      actions.displayValues(`${displayValue}x${value}`);
     }
     else {
-      if (lastInsertedValue === ")") {
-        if (type === "number") {
-          actions.displayValues(`${displayValue}x${value}`);
-        }
-        else {
-          return;
-        }
-      }
-      else {
-        actions.displayValues(`${displayValue}${value}`);
-      }
+      actions.displayValues(`${displayValue}${value}`);
     }
   }
 
-
-  _onCheckOperators = (value, pressedOperator, checkOperator1, checkOperator2, checkOperator3) => {
+  handleCloseBracket = (value) => {
     const { displayValue } = this.props;
-    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
-    if (lastInsertedValue !== pressedOperator) {
-      if (lastInsertedValue === checkOperator1 || lastInsertedValue === checkOperator2 || lastInsertedValue === checkOperator3) {
-        let newDisplayValue = displayValue.substring(0, displayValue.length - 1)
-          + pressedOperator
-          + displayValue.substring(displayValue.length);
-        actions.displayValues(newDisplayValue);
-      }
-      else {
-        actions.displayValues(`${displayValue}${value}`);
-      }
+    if (_.countBy(displayValue)["("] === _.countBy(displayValue)[")"] /* count the number of brackets */) { 
+      return;
     }
+    actions.displayValues(`${displayValue}${value}`);
   }
 
   _onEqual = () => {
@@ -152,15 +147,9 @@ class ScientificCalc extends Component {
   }
 
   _onAllClear = () => {
-    const { displayValue } = this.props;
-    if (displayValue !== "0") {
-      actions.displayValues("0");
-      actions.finalOutcome(null);
+    actions.displayValues("0");
+    actions.finalOutcome(null);
 
-    }
-    else {
-      return;
-    }
   }
 
   _onBackSpace = () => {
@@ -194,35 +183,65 @@ class ScientificCalc extends Component {
     }
   }
 
-  _onSqrt=(type, value)=>{
-    const {displayValue}=this.props
+  _onSqrt = (value) => {
+    const { displayValue } = this.props
     let lastInsertedValue = displayValue.substring(displayValue.length - 1);
     if (displayValue === "0" || displayValue == "00") {
       actions.displayValues(`${value}(`);
     }
-    else{
+    else {
       let numbers = /^[-+]?[0-9]+$/;
       if (numbers.test(lastInsertedValue)) {
-        if (type === "operator") {
-          actions.displayValues(`${displayValue}x${value}(`);
-        }
-        else {
-          actions.displayValues(`${displayValue}${value}`);
-        }
+        actions.displayValues(`${displayValue}x${value}(`);
+        this.showTotal(`*${value}`);
       }
-      else {
+      else if (_.includes(['+', '-', 'x', '÷'], lastInsertedValue)) {
         actions.displayValues(`${displayValue}${value}(`);
       }
+      else {
+        actions.displayValues(`${displayValue}x${value}(`);
+      }
     }
-    this.showTotal(value);
+  }
 
+  _onPie = (value) => {
+    const { displayValue } = this.props
+    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+    console.log(lastInsertedValue, "last inserted")
+    if (displayValue === "0" || displayValue == "00") {
+      actions.displayValues(value);
+      this.showTotal(`+${value}`)
+    }
+    else {
+      let numbers = /^[-+]?[0-9]+$/;
+      if (numbers.test(lastInsertedValue)) {
+        actions.displayValues(`${displayValue}x${value}`);
+        this.showTotal(`*${value}`)
+      }
+      else if (_.includes(['+', '-', 'x', '÷'], lastInsertedValue)) {
+        actions.displayValues(`${displayValue}${value}`);
+      }
+      else {
+        actions.displayValues(`${displayValue}x${value}`);
+        this.showTotal(`*${value}`)
+      }
+    }
+  }
 
+  _onPower = (value) => {
+    const { displayValue } = this.props
+    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+    let numbers = /^[-+]?[1-9]+$/;
+    if (numbers.test(lastInsertedValue)) {
+      actions.displayValues(`${displayValue}${value}`);
+    }
+    // else {
+    //   actions.displayValues(`${displayValue}${value}`);
+    // }
   }
 
 
-  
 
-  
   render() {
     const { displayValue, finalOutcome } = this.props
     return (
@@ -240,14 +259,17 @@ class ScientificCalc extends Component {
             <BtnComp btnTitle={")"} _onBtn={() => this._onBtn("operator", ")")} />
           </View>
           <View style={styles.calcBtnsView}>
-            <BtnComp btnTitle={"√"} _onBtn={() => this._onSqrt("operator","√")} />
-            <BtnComp btnTitle={"π"} _onBtn={() => this._onBtn("number", "5")} />
+            <BtnComp btnTitle={"√"} _onBtn={() => this._onSqrt("√")} />
+            <BtnComp btnTitle={"π"} _onBtn={() => this._onPie("π")} />
             <BtnComp btnTitle={"sin"} _onBtn={() => this._onBtn("number", "6")} />
             <BtnComp btnTitle={"cos"} _onBtn={() => this._onBtn("operator", "x")} />
             <BtnComp btnTitle={"tan"} _onBtn={() => this._onBtn("operator", "÷")} />
           </View>
           <View style={styles.calcBtnsView}>
-            <BtnComp btnTitle={"x²"} _onBtn={() => this._onBtn("number", "4")} />
+            <TouchableOpacity style={styles.btnView} onPress={() => this._onBtn("operator", "^")}>
+              <Text style={styles.btnName}>x</Text>
+              <Text style={styles.inverseTxt}>n</Text>
+            </TouchableOpacity>
             <BtnComp btnTitle={"|x|"} _onBtn={() => this._onBtn("number", "5")} />
             <InverseBtnComp btnTitle={"sin"} _onBtn={this._onBackSpace} />
             <InverseBtnComp btnTitle={"cos"} _onBtn={this._onBackSpace} />
@@ -325,5 +347,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     height: 30,
     justifyContent: "space-around"
+  },
+  btnView: {
+    height: "100%",
+    width: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnName: {
+    position: "relative",
+    fontSize: 20
+  },
+  inverseTxt: {
+    position: "absolute",
+    left: 47,
+    top: 0
   }
 })
