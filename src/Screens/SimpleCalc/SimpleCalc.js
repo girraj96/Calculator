@@ -1,7 +1,11 @@
 import React, { Component } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+
+// third party libraries
 import { connect } from 'react-redux'
 import mathExp from "math-expression-evaluator";
+import { showError } from '../../utils/helperFunctions';
+import _ from 'lodash';
 
 //components
 import BtnComp from '../../Components/BtnComp'
@@ -29,117 +33,144 @@ import colors from '../../styles/colors'
   }
 
   _onBtn = (type, value) => {
-    const { displayValue } = this.props;
-    if (type === "number") {
-      if (displayValue === "0" || displayValue == "00") {
-        // set first number in place of zeros
+    return _.isEqual(type, "number") ? this.handleNumbers(value, type)
+    : this.operatorSwitching(value);
+    }
+    operatorSwitching = (value) => {
+      switch (value) {
+        case "+":
+          this.handleOperators(value)
+          break;
+        case "-":
+          this.handleOperators(value)
+          break;
+        case "x":
+          this.handleOperators(value)
+          break;
+        case "÷":
+          this.handleOperators(value)
+          break;
+        default:
+          showError("please enter valid operator");
+          break;
+      }
+    }
+
+    handleNumbers = (value) => {
+      const { displayValue } = this.props;
+      let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+      if (_.isEqual("0", displayValue) || _.isEqual("00", displayValue)) {
+        // to change 0 and 00 to pressed number
         actions.displayValues(value);
       }
       else {
-        //set mathematical expression to display
+        actions.displayValues(`${displayValue}${value}`);
+        this.showTotal(value);
+      }
+    }
+
+
+    handleOperators = (value) => {
+      const { displayValue } = this.props;
+      let lastInsertedValue = displayValue.substring(displayValue.length - 1);
+      console.log(lastInsertedValue, value)
+      if (_.includes(["+", "-", "x", "÷",], lastInsertedValue)) {
+        if (_.isEqual(lastInsertedValue, value)) {
+          return;
+        }
+        else {
+          let newDisplayValue = displayValue.substring(0, displayValue.length - 1)
+            + value
+            + displayValue.substring(displayValue.length);
+          actions.displayValues(newDisplayValue);
+        }
+      }
+      else {
         actions.displayValues(`${displayValue}${value}`);
       }
     }
-    else if (type === "operator") {
-      switch (value) {
-        case "+":
-          this._onCheckOperators(value,"+","-","x","÷")
-          break;
-        case "-":
-          this._onCheckOperators(value,"-","+","x","÷")
 
-          break;
-        case "x":
-          this._onCheckOperators(value,"x","+","-","÷")
-          break;
-          case "÷":
-            this._onCheckOperators(value,"÷","+","-","x")
-          break;
-          default:
-          alert("please check operator")
-          break;
-      }
-    }
-   let newCurrentValue = `${displayValue}${value}`.replace(/x/gi, "*").replace(/÷/gi, "/");
-      if(!newCurrentValue.includes("+") && !newCurrentValue.includes("-") && 
-       !newCurrentValue.includes("*") && !newCurrentValue.includes("/") ){ 
+    showTotal = (value) => {
+      const { displayValue } = this.props;
+      let newCurrentValue = `${displayValue}${value}`.replace(/x/gi, "*").replace(/÷/gi, "/");
+      if (!newCurrentValue.includes("+") && !newCurrentValue.includes("-") &&
+        !newCurrentValue.includes("*") && !newCurrentValue.includes("/")) {
         return;
-      } 
-      else{
+      }
+      else {
         try {
           let total = mathExp.eval(newCurrentValue).toString();
-          actions.finalOutcome(total)
+          actions.finalOutcome(total);
         } catch (error) {
           return;
         }
       }
-  }
-
-  _onCheckOperators=(value,pressedOperator,checkOperator1,checkOperator2,checkOperator3 )=>{
-    const {displayValue}=this.props;
-    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
-    if (lastInsertedValue !== pressedOperator) {
-      if (lastInsertedValue === checkOperator1 || lastInsertedValue === checkOperator2 || lastInsertedValue ===checkOperator3) {
-        let newDisplayValue = displayValue.substring(0, displayValue.length - 1)
-          + pressedOperator
-          + displayValue.substring(displayValue.length);
-        actions.displayValues(newDisplayValue)
-      }
-      else {
-        actions.displayValues(`${displayValue}${value}`)
-      }
     }
-  }
 
-  _onEqual = () => {
-    const { finalOutcome } = this.props
-    actions.displayValues(finalOutcome);
-    actions.finalOutcome(null);
-  }
-
-  _onAllClear = () => {
+  _onPercentBtn = () => {
     const { displayValue } = this.props;
-    if (displayValue !== "0") {
-      actions.displayValues("0");
-    actions.finalOutcome(null);
-    }
-    else {
+    if (displayValue === "0") {
       return;
     }
+    else {
+      try {
+        let percentValue = mathExp.eval(`${displayValue}/100`).toString();
+        actions.finalOutcome(percentValue);
+      } catch (error) {
+        return;
+      }
+    }
   }
 
-   _onBackSpace = () => {
-      const { displayValue } = this.props;
-      if (displayValue === "0") {
-          return;
+  
+  _onEqual = () => {
+    const { finalOutcome } = this.props
+    if (finalOutcome === null) {
+      showError("please enter valid expression")
+    }
+    else {
+      actions.displayValues(finalOutcome);
+      actions.finalOutcome(null);
+    }
+  }
+
+_onAllClear = () => {
+  const { displayValue } = this.props;
+  if (displayValue !== "0") {
+    actions.displayValues("0");
+  actions.finalOutcome(null);
+  }
+  else {
+    return;
+  }
+}
+
+_onBackSpace = () => {
+  const { displayValue } = this.props;
+  if (displayValue === "0" || displayValue==="00") {
+    return;
+  }
+  else {
+    let editedValue = displayValue.toString().slice(0, -1);
+    if (editedValue.length === 0) {
+      actions.displayValues("0");
+      actions.finalOutcome(null)
+    }
+    else {
+      actions.displayValues(editedValue);
+      let newEditedValue = editedValue.replace(/x/gi, "*").replace(/÷/gi, "/");
+      try {
+        let newTotal = mathExp.eval(newEditedValue).toString();
+        actions.finalOutcome(newTotal)
+      } catch (error) {
+        return;
       }
-      else {
-          let editedValue = displayValue.toString().slice(0, -1);
-          if (editedValue.length === 0) {
-            actions.displayValues("0");
+    }
+  }
+}
 
-          }
-          else {
-            actions.displayValues(editedValue);
 
-          }
-      }
-   }
 
-   _onPercentBtn=()=>{
-     const {displayValue}=this.props;
-     if(displayValue==="0"){
-       return;
-     }
-     else if(displayValue.includes("+") || displayValue.includes("-") ||
-     displayValue.includes("x") || displayValue.includes("÷")){
-       return;
-     }
-     else{
-     let percentValue=eval(displayValue/100)
-     actions.finalOutcome(percentValue);
-     }
-   }
   render() {
     const {displayValue,finalOutcome}=this.props;
     return (
