@@ -1,9 +1,11 @@
 import React, { Component } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import _, { countBy } from 'lodash'
 import mathExp from "math-expression-evaluator";
 import { connect } from 'react-redux';
 import actions from '../../redux/actions';
+import _ from 'lodash';
+
+
 
 //components
 import BtnComp from '../../Components/BtnComp'
@@ -15,6 +17,7 @@ import WrapperContainer from '../../Components/WrapperContainer'
 import imagePath from '../../constants/imagePath'
 import strings from '../../constants/lang'
 import colors from '../../styles/colors'
+import { showError } from '../../utils/helperFunctions';
 
 
 
@@ -73,7 +76,7 @@ class ScientificCalc extends Component {
     }
     else if(_.includes([")","π"],lastInsertedValue)){
       actions.displayValues(`${displayValue}x${value}`);
-      this.showTotal(`${value}`);
+      this.showTotal(value);
     }
     else {
       actions.displayValues(`${displayValue}${value}`);
@@ -140,12 +143,6 @@ class ScientificCalc extends Component {
     actions.displayValues(`${displayValue}${value}`);
   }
 
-  _onEqual = () => {
-    const { finalOutcome } = this.props
-    actions.displayValues(finalOutcome);
-    actions.finalOutcome(null);
-  }
-
   _onAllClear = () => {
     actions.displayValues("0");
     actions.finalOutcome(null);
@@ -173,13 +170,13 @@ class ScientificCalc extends Component {
     if (displayValue === "0") {
       return;
     }
-    else if (displayValue.includes("+") || displayValue.includes("-") ||
-      displayValue.includes("x") || displayValue.includes("÷")) {
-      return;
-    }
     else {
-      let percentValue = eval(displayValue / 100)
-      actions.finalOutcome(percentValue);
+      try {
+        let percentValue = mathExp.eval(`${displayValue}/100`).toString();
+        actions.finalOutcome(percentValue);
+      } catch (error) {
+          return;
+      }
     }
   }
 
@@ -195,7 +192,7 @@ class ScientificCalc extends Component {
         actions.displayValues(`${displayValue}x${value}(`);
         this.showTotal(`*${value}`);
       }
-      else if (_.includes(['+', '-', 'x', '÷'], lastInsertedValue)) {
+      else if (_.includes(['+', '-', 'x', '÷','^'], lastInsertedValue)) {
         actions.displayValues(`${displayValue}${value}(`);
       }
       else {
@@ -218,8 +215,9 @@ class ScientificCalc extends Component {
         actions.displayValues(`${displayValue}x${value}`);
         this.showTotal(`*${value}`)
       }
-      else if (_.includes(['+', '-', 'x', '÷'], lastInsertedValue)) {
+      else if (_.includes(['+', '-', 'x', '÷','(','^'], lastInsertedValue)) {
         actions.displayValues(`${displayValue}${value}`);
+        this.showTotal(value)
       }
       else {
         actions.displayValues(`${displayValue}x${value}`);
@@ -228,18 +226,17 @@ class ScientificCalc extends Component {
     }
   }
 
-  _onPower = (value) => {
-    const { displayValue } = this.props
-    let lastInsertedValue = displayValue.substring(displayValue.length - 1);
-    let numbers = /^[-+]?[1-9]+$/;
-    if (numbers.test(lastInsertedValue)) {
-      actions.displayValues(`${displayValue}${value}`);
-    }
-    // else {
-    //   actions.displayValues(`${displayValue}${value}`);
-    // }
-  }
 
+  _onEqual = () => {
+    const { finalOutcome } = this.props
+    if(finalOutcome===null){
+      showError("please enter valid expression")
+    }
+    else{
+      actions.displayValues(finalOutcome);
+    actions.finalOutcome(null);
+    }
+  }
 
 
   render() {
@@ -252,7 +249,7 @@ class ScientificCalc extends Component {
         </View>
         <View style={styles.calcTouchPadView}>
           <View style={styles.calcBtnsView}>
-            <BtnComp btnTitle={"in"} _onBtn={() => this._onBtn("number", "4")} />
+            <BtnComp btnTitle={"mod"} _onBtn={() => this._onBtn("number", "4")} />
             <BtnComp btnTitle={"log"} _onBtn={() => this._onBtn("number", "5")} />
             <BtnComp btnTitle={"e"} _onBtn={() => this._onBtn("number", "6")} />
             <BtnComp btnTitle={"("} _onBtn={() => this._onBtn("operator", "(")} />
@@ -270,7 +267,7 @@ class ScientificCalc extends Component {
               <Text style={styles.btnName}>x</Text>
               <Text style={styles.inverseTxt}>n</Text>
             </TouchableOpacity>
-            <BtnComp btnTitle={"|x|"} _onBtn={() => this._onBtn("number", "5")} />
+            <BtnComp btnTitle={"|x|"} _onBtn={this._onAbsolute} />
             <InverseBtnComp btnTitle={"sin"} _onBtn={this._onBackSpace} />
             <InverseBtnComp btnTitle={"cos"} _onBtn={this._onBackSpace} />
             <InverseBtnComp btnTitle={"tan"} _onBtn={this._onBackSpace} />
