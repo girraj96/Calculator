@@ -1,15 +1,17 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity } from 'react-native'
 import colors from '../styles/colors'
+import fontFamily from '../styles/fontFamily'
 
 export default function BtnComp({
-    btnTitle,_onBtn, titleFontSize=20, titleColor=colors.black
+    btnTitle,_onBtn, titleFontSize=22, titleColor=colors.black
 }) {
     
     return (
         <TouchableOpacity style={styles.btnView} onPress={_onBtn}>
             <Text style={{fontSize:titleFontSize,
-            color:titleColor}}>{btnTitle}</Text>
+            color:titleColor,
+            fontFamily:fontFamily.regular}}>{btnTitle}</Text>
         </TouchableOpacity>
     )
 }

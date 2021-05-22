@@ -8,8 +8,6 @@ import actions from '../../redux/actions';
 import _ from 'lodash';
 import { showError } from '../../utils/helperFunctions';
 
-
-
 //components
 import BtnComp from '../../Components/BtnComp'
 import BtnWithIcon from '../../Components/BtnWithIcon'
@@ -282,21 +280,26 @@ class ScientificCalc extends Component {
       return;
     }
     else {
-      let editedValue = displayValue.toString().slice(0, -1);
+      let editedValue = `${displayValue}`.slice(0, -1);
       if (editedValue.length === 0) {
         actions.displayValues("0");
         actions.finalOutcome(null)
       }
       else {
         actions.displayValues(editedValue);
-        let newEditedValue = editedValue.replace(/x/gi, "*").replace(/÷/gi, "/").replace(/√/gi, "root")
-          .replace(/π/g, "3.1415");
-        console.log("edited value====>", newEditedValue)
-        try {
-          let newTotal = mathExp.eval(newEditedValue).toString();
-          actions.finalOutcome(newTotal)
-        } catch (error) {
-          return;
+        // let checkOperators=/|"+"|"-"|"x"|"÷"|/
+        if(editedValue.includes("+") || editedValue.includes("-") || editedValue.includes("x") || editedValue.includes("÷")){
+        // if(checkOperators.test(editedValue)){
+        let newEditedValue = editedValue.replace(/x/gi, "*").replace(/÷/gi, "/");
+          try {
+            let newTotal = mathExp.eval(newEditedValue).toString();
+            actions.finalOutcome(newTotal);
+          } catch (error) {
+            return;
+          }
+        }
+        else{
+          actions.finalOutcome(null)
         }
       }
     }
@@ -363,21 +366,20 @@ class ScientificCalc extends Component {
             <BtnComp btnTitle={"%"} titleColor={colors.themeColor} _onBtn={this._onPercentBtn} />
             <BtnComp btnTitle={"="} titleColor={colors.themeColor} titleFontSize={30} _onBtn={this._onEqual} />
           </View>
-
         </View>
       </WrapperContainer>
 
     )
   }
 }
-const mapStatToProps = (state) => {
+const mapStateToProps = (state) => {
   return {
     displayValue: state.simpleCalc.displayValue,
     finalOutcome: state.simpleCalc.finalOutcome,
   }
 }
 
-export default connect(mapStatToProps)(ScientificCalc);
+export default connect(mapStateToProps)(ScientificCalc);
 
 const styles = StyleSheet.create({
   enteredTxt: {

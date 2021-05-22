@@ -6,7 +6,6 @@ import strings from '../constants/lang';
 import navigationStrings from '../constants/navigationStrings';
 import { Convertor, ScientificCalc, SimpleCalc } from '../Screens';
 import colors from '../styles/colors';
-import actions from '../redux/actions';
 
 const Tab = createMaterialTopTabNavigator();
 
